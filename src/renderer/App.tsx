@@ -30,12 +30,20 @@ export default function App() {
   }, []);
 
   async function handleActivate(licenseKey: string) {
-    const result = await window.mainlayer.activate(DEMO_USER_ID, licenseKey);
-    if (!result.success) throw new Error(result.message);
-    // Re-verify to get updated plan info
-    const status = await window.mainlayer.verify(DEMO_USER_ID);
-    setLicenseStatus(status);
-    setAppState(status.authorized ? 'unlocked' : 'locked');
+    try {
+      const result = await window.mainlayer.activate(DEMO_USER_ID, licenseKey);
+      if (!result.success) {
+        throw new Error(result.message);
+      }
+      // Re-verify to get updated plan info
+      const status = await window.mainlayer.verify(DEMO_USER_ID);
+      setLicenseStatus(status);
+      setAppState(status.authorized ? 'unlocked' : 'locked');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Activation failed';
+      console.error('[App] Activation error:', message);
+      throw err;
+    }
   }
 
   function handleOpenPricing() {

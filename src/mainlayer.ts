@@ -47,10 +47,16 @@ export async function verifyLicense(
   userId: string,
   licenseKey?: string,
 ): Promise<LicenseStatus> {
+  if (!userId) {
+    throw new Error('verifyLicense: userId is required');
+  }
+
   const cached = store.get('license');
 
   // Try online verification first
   try {
+    console.log('[Mainlayer] Verifying license online...', { userId });
+
     const access = await mainlayer.resources.verifyAccess(
       PREMIUM_RESOURCE_ID,
       userId,
@@ -69,6 +75,11 @@ export async function verifyLicense(
     };
     store.set('license', newCache);
 
+    console.log('[Mainlayer] License verified online:', {
+      authorized: access.authorized,
+      plan: newCache.plan,
+    });
+
     return {
       authorized: access.authorized,
       plan: newCache.plan,
@@ -76,7 +87,8 @@ export async function verifyLicense(
       gracePeriodActive: false,
     };
   } catch (err) {
-    console.warn('[Mainlayer] Online verification failed, checking cache:', err);
+    const errMsg = err instanceof Error ? err.message : String(err);
+    console.warn('[Mainlayer] Online verification failed:', errMsg);
   }
 
   // Offline fallback
@@ -85,17 +97,26 @@ export async function verifyLicense(
     const withinGrace = ageMs < GRACE_PERIOD_MS;
 
     if (withinGrace) {
+      const remainingMs = GRACE_PERIOD_MS - ageMs;
+      const remainingDays = Math.ceil(remainingMs / (24 * 60 * 60 * 1000));
+      console.log('[Mainlayer] Using cached license (grace period active)', {
+        remainingDays,
+      });
+
       return {
         authorized: cached.authorized,
         plan: cached.plan,
         offline: true,
         gracePeriodActive: true,
-        gracePeriodRemainingMs: GRACE_PERIOD_MS - ageMs,
+        gracePeriodRemainingMs: remainingMs,
       };
+    } else {
+      console.warn('[Mainlayer] Grace period expired for cached license');
     }
   }
 
   // Grace period expired or no cache — deny access
+  console.warn('[Mainlayer] Denying access: no valid cache or expired grace period');
   return {
     authorized: false,
     plan: 'free',
@@ -112,14 +133,28 @@ export async function activateLicense(
   userId: string,
   licenseKey: string,
 ): Promise<{ success: boolean; message: string }> {
+  if (!userId || !licenseKey) {
+    return {
+      success: false,
+      message: 'User ID and license key are required.',
+    };
+  }
+
   try {
+    console.log('[Mainlayer] Activating license key for user:', userId);
+
     const status = await verifyLicense(userId, licenseKey);
     if (status.authorized) {
-      return { success: true, message: `License activated. Plan: ${status.plan}` };
+      const msg = `License activated! Plan: ${status.plan}`;
+      console.log('[Mainlayer] Activation successful:', msg);
+      return { success: true, message: msg };
     }
-    return { success: false, message: 'License key is not valid or has expired.' };
+    const msg = 'License key is not valid or has expired.';
+    console.warn('[Mainlayer] Activation failed:', msg);
+    return { success: false, message: msg };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Activation failed';
+    console.error('[Mainlayer] Activation error:', message);
     return { success: false, message };
   }
 }

@@ -40,11 +40,12 @@ export function Paywall({
     }
   }
 
-  function formatGracePeriod(ms: number) {
+  function formatGracePeriod(ms: number): string {
     const days = Math.floor(ms / (1000 * 60 * 60 * 24));
     const hours = Math.floor((ms % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    if (days > 0) return `${days}d ${hours}h`;
-    return `${hours}h`;
+    if (days > 0) return `${days} day${days !== 1 ? 's' : ''} ${hours} hour${hours !== 1 ? 's' : ''}`;
+    if (hours > 0) return `${hours} hour${hours !== 1 ? 's' : ''}`;
+    return 'less than 1 hour';
   }
 
   return (
@@ -164,17 +165,19 @@ export function Paywall({
 
         <button
           onClick={onOpenPricing}
+          type="button"
           style={{
             marginTop: 20,
             background: 'none',
             border: 'none',
-            color: '#6b7280',
+            color: '#2563eb',
             fontSize: 14,
             cursor: 'pointer',
             textDecoration: 'underline',
+            fontWeight: 500,
           }}
         >
-          Get a license at mainlayer.fr
+          Purchase a license →
         </button>
       </div>
     </div>
