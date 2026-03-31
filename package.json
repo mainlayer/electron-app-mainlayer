@@ -14,7 +14,7 @@
     "lint": "eslint src --ext .ts,.tsx"
   },
   "dependencies": {
-    "@mainlayer/sdk": "^1.0.0",
+    "@mainlayer/sdk": "github:mainlayer/mainlayer-js",
     "electron-store": "^8.1.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
